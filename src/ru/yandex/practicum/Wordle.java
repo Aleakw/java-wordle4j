@@ -29,6 +29,8 @@ public class Wordle {
             System.out.println("^ — буква есть, но стоит не на своём месте");
             System.out.println("- — буквы нет в слове");
             System.out.println("Нажмите Enter на пустой строке, чтобы получить подсказку.");
+            System.out.println("Количество подсказок ограничено: " + game.getHintsLeft());
+            System.out.println("Введите \"стоп\", чтобы завершить игру.");
             System.out.println();
 
             while (game.isRunning()) {

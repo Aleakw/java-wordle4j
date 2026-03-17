@@ -7,6 +7,8 @@ import java.util.List;
 public class WordleGame {
 
     private static final int MAX_STEPS = 6;
+    private static final int MAX_HINTS = 3;
+    private static final String STOP_COMMAND = "стоп";
 
     private final WordleDictionary dictionary;
     private final PrintWriter log;
@@ -18,7 +20,9 @@ public class WordleGame {
 
     private String answer;
     private int stepsLeft;
+    private int hintsLeft;
     private boolean win;
+    private boolean stopped;
 
     public WordleGame(WordleDictionary dictionary, PrintWriter log) {
         this(dictionary, log, dictionary.getRandomWord());
@@ -41,22 +45,33 @@ public class WordleGame {
         }
 
         this.stepsLeft = MAX_STEPS;
+        this.hintsLeft = MAX_HINTS;
         this.win = false;
+        this.stopped = false;
+
         this.previousWords = new ArrayList<>();
         this.previousHints = new ArrayList<>();
         this.candidateWords = new ArrayList<>(dictionary.getWords());
     }
 
     public boolean isRunning() {
-        return !win && stepsLeft > 0;
+        return !win && !stopped && stepsLeft > 0;
     }
 
     public int getStepsLeft() {
         return stepsLeft;
     }
 
+    public int getHintsLeft() {
+        return hintsLeft;
+    }
+
     public boolean isWin() {
         return win;
+    }
+
+    public boolean isStopped() {
+        return stopped;
     }
 
     public String getAnswer() {
@@ -70,10 +85,30 @@ public class WordleGame {
 
         String normalizedInput = WordleDictionary.normalize(input);
 
-        if (normalizedInput.isEmpty()) {
-            return buildSuggestionMessage();
+        // Команда остановки игры
+        if (normalizedInput.equals(STOP_COMMAND)) {
+            stopped = true;
+            return "Игра остановлена. Загаданное слово: " + answer;
         }
 
+        // Запрос подсказки по пустой строке
+        if (normalizedInput.isEmpty()) {
+            if (hintsLeft == 0) {
+                return "Подсказки закончились.";
+            }
+
+            String suggestion = findSuggestionWord();
+
+            if (suggestion == null || suggestion.isBlank()) {
+                return "Подсказку подобрать не удалось.";
+            }
+
+            hintsLeft--;
+            return "Подсказка: " + suggestion + System.lineSeparator()
+                    + "Осталось подсказок: " + hintsLeft;
+        }
+
+        // Проверка корректности слова
         if (!WordleDictionary.isValidWord(normalizedInput)) {
             return "Введите слово из 5 русских букв.";
         }
@@ -104,16 +139,6 @@ public class WordleGame {
         }
 
         return normalizedInput + System.lineSeparator() + hint;
-    }
-
-    private String buildSuggestionMessage() {
-        String suggestion = findSuggestionWord();
-
-        if (suggestion == null || suggestion.isBlank()) {
-            return "Подсказку подобрать не удалось.";
-        }
-
-        return "Подсказка: " + suggestion;
     }
 
     private String findSuggestionWord() {
@@ -152,12 +177,10 @@ public class WordleGame {
 
         char[] result = {'-', '-', '-', '-', '-'};
         int[] answerLetterCounts = new int[33];
-        boolean[] matchedPositions = new boolean[5];
 
         for (int i = 0; i < 5; i++) {
             if (normalizedGuess.charAt(i) == normalizedAnswer.charAt(i)) {
                 result[i] = '+';
-                matchedPositions[i] = true;
             } else {
                 char answerChar = normalizedAnswer.charAt(i);
                 answerLetterCounts[answerChar - 'а']++;
